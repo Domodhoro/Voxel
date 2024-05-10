@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -23,11 +24,15 @@ extern "C" {
 #define SRC_WIDTH 1200
 #define SRC_HEIGHT 600
 #define FPS 60
+#define CHUNK_WIDTH 16
+#define CHUNK_HEIGHT 128
+#define CHUNK_LENGTH 16
 
-#include "./camera.hpp"
 #include "./shader.hpp"
-#include "./image.hpp"
-#include "./block.hpp"
+#include "./vertex_array.hpp"
+#include "./texture.hpp"
+#include "./camera.hpp"
+#include "./chunk.hpp"
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void keyboard_callback(GLFWwindow *window, Camera &camera);
@@ -78,12 +83,10 @@ int main() {
     glfwSetCursorPos(window, SRC_WIDTH / 2, SRC_HEIGHT / 2);
 
     if (glewInit() != GLEW_OK) {
-        std::cout << "Falha ao iniciar GLEW." << std::endl;
+        std::cerr << "Falha ao iniciar GLEW." << std::endl;
 
         return 1;
     }
-
-    Image image("./block.png");
 
     lua_getglobal(L, "vertex_shader_source");
 
@@ -99,9 +102,11 @@ int main() {
 
     Shader shader(vertex_shader_source, fragment_shader_source);
 
-    Block block;
+    Texture texture("./block.png");
 
     Camera camera({0.0f, 0.0f, -3.0f});
+
+    Chunk chunk({0.0f, 0.0f, 0.0f});
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -121,7 +126,7 @@ int main() {
             keyboard_callback(window, camera);
             mouse_callback(window, camera);
 
-            block.draw(shader, image, camera);
+            chunk.draw(shader, texture, camera);
 
             glfwSwapBuffers(window);
             glfwPollEvents();
@@ -146,7 +151,7 @@ void keyboard_callback(GLFWwindow *window, Camera &camera) {
         glfwSetWindowShouldClose(window, true);
     }
 
-    float camera_speed = 0.1f;
+    float camera_speed = 0.2f;
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         camera.keyboard_update(CAMERA_MOVEMENTS::FORWARD, camera_speed);
