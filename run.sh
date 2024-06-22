@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source_file="main.cpp"
-executable="Voxel"
+executable="VoxelEngine"
 
 if [ -f "$executable" ]; then
     rm "$executable"
