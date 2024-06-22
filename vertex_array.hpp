@@ -6,9 +6,9 @@ struct Vertex {
     glm::vec2 texture_coordinates;
 };
 
-class Vertex_Array {
+class VertexArray {
 public:
-	Vertex_Array() {
+	VertexArray() {
 		glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
         glGenBuffers(1, &EBO);

@@ -2,10 +2,7 @@
 #define CAMERA_HPP
 
 enum class CAMERA_MOVEMENTS {
-    FORWARD, 
-    BACKWARD, 
-    RIGHT, 
-    LEFT
+    FORWARD, BACKWARD, RIGHT, LEFT
 };
 
 class Camera {
@@ -14,43 +11,43 @@ public:
 
     }
 
-    glm::mat4 get_projection() const { 
+    glm::mat4 getProjection() const { 
         return glm::perspective(glm::radians(FOV), static_cast<double>(SRC_WIDTH) / static_cast<double>(SRC_HEIGHT), near, far);
     }
 
-    glm::mat4 get_view() const {
+    glm::mat4 getView() const {
         return glm::lookAt(position, position + front, up);
     }
 
-    void keyboard_update(CAMERA_MOVEMENTS camera_movements, float speed) {
-        switch (camera_movements) {
+    void keyboardUpdate(CAMERA_MOVEMENTS cameraMovements, float cameraSpeed) {
+        switch (cameraMovements) {
             case CAMERA_MOVEMENTS::FORWARD:
-                position += speed * front;
+                position += cameraSpeed * front;
                 break;
             case CAMERA_MOVEMENTS::BACKWARD:
-                position -= speed * glm::normalize(glm::cross(front, up));
+                position -= cameraSpeed * glm::normalize(glm::cross(front, up));
                 break;
             case CAMERA_MOVEMENTS::RIGHT:
-                position -= speed * front;
+                position -= cameraSpeed * front;
                 break;
             case CAMERA_MOVEMENTS::LEFT:
-                position += speed * glm::normalize(glm::cross(front, up));
+                position += cameraSpeed * glm::normalize(glm::cross(front, up));
                 break;
         }
     }
 
-    void mouse_update(double &off_set_x, double &off_set_y, double sensitivity) {
-        yaw += off_set_x * sensitivity;
-        pitch += off_set_y * sensitivity;
+    void mouseUpdate(double &xOffset, double &yOffset, double sensitivity) {
+        yaw += xOffset * sensitivity;
+        pitch += yOffset * sensitivity;
 
-        const double angle_max = 80.0;
+        const double angleMax = 80.0;
 
-        if (pitch >= angle_max) {
-            pitch = angle_max;
+        if (pitch >= angleMax) {
+            pitch = angleMax;
         }
 
-        if (pitch <= -angle_max) {
-            pitch = -angle_max;
+        if (pitch <= -angleMax) {
+            pitch = -angleMax;
         }
 
         glm::vec3 direction = {

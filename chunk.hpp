@@ -2,9 +2,7 @@
 #define CHUNK_HPP
 
 enum class BLOCK_TYPE {
-    AIR,
-    GRASS,
-    DIRT
+    AIR, GRASS, DIRT
 };
 
 struct Faces {
@@ -23,43 +21,43 @@ public:
     	for (int x = 0; x != CHUNK_WIDTH; x++) {
     		for (int y = 0; y != CHUNK_HEIGHT; y++) {
     			for (int z = 0; z != CHUNK_LENGTH; z++) {
-    				if (get_block_type(x, y, z) != BLOCK_TYPE::AIR) {
+    				if (getBlockType(x, y, z) != BLOCK_TYPE::AIR) {
     					Faces faces = otimization(x, y, z);
 	    				
-	    				generate_mesh(x, y, z, i, faces);
+	    				generateMesh(x, y, z, i, faces);
 			        }
     			}
     		}
     	}
 
-        vertex_array.bind(vertices, indices);
+        vertexArray.bind(vertices, indices);
     }
 
     void draw(Shader &shader, Texture &texture, Camera &camera) const {
         shader.use();
         texture.bind();
-        vertex_array.bind();
+        vertexArray.bind();
 
         glm::mat4 model = glm::mat4(1.0f);
 
         model = translate(model, position);
 
-        shader.set_mat4("Projection", camera.get_projection());
-        shader.set_mat4("View", camera.get_view());
-        shader.set_mat4("Model", model);
+        shader.setMat4("Projection", camera.getProjection());
+        shader.setMat4("View", camera.getView());
+        shader.setMat4("Model", model);
         
         glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
 
-        vertex_array.unbind();
+        vertexArray.unbind();
     }
 protected:
 	glm::vec3 position;
-    Vertex_Array vertex_array;
+    VertexArray vertexArray;
     std::vector<BLOCK_TYPE> blocks;
     std::vector<Vertex> vertices;
 	std::vector<unsigned int> indices;
 
-	BLOCK_TYPE get_block_type(int x, int y, int z) const {
+	BLOCK_TYPE getBlockType(int x, int y, int z) const {
 		return blocks.at(x + y * CHUNK_WIDTH + z * CHUNK_WIDTH * CHUNK_HEIGHT);
 	}
 
@@ -68,34 +66,34 @@ protected:
 			true, true, true, true, true, true
 		};
 
-    	if (x > 0 && get_block_type(x - 1, y, z) != BLOCK_TYPE::AIR) {
+    	if (x > 0 && getBlockType(x - 1, y, z) != BLOCK_TYPE::AIR) {
 			faces.left = false;
 		}
 
-        if (y > 0 && get_block_type(x, y - 1, z) != BLOCK_TYPE::AIR) {
+        if (y > 0 && getBlockType(x, y - 1, z) != BLOCK_TYPE::AIR) {
         	faces.down = false;
         }
 
-        if (z > 0 && get_block_type(x, y, z - 1) != BLOCK_TYPE::AIR) {
+        if (z > 0 && getBlockType(x, y, z - 1) != BLOCK_TYPE::AIR) {
         	faces.front = false;
         }
 
-        if (x < (CHUNK_WIDTH - 1) && get_block_type(x + 1, y, z) != BLOCK_TYPE::AIR) {
+        if (x < (CHUNK_WIDTH - 1) && getBlockType(x + 1, y, z) != BLOCK_TYPE::AIR) {
         	faces.right = false;
         }
 
-        if (y < (CHUNK_HEIGHT - 1) && get_block_type(x, y + 1, z) != BLOCK_TYPE::AIR) {
+        if (y < (CHUNK_HEIGHT - 1) && getBlockType(x, y + 1, z) != BLOCK_TYPE::AIR) {
         	faces.up = false;
         }
 
-        if (z < (CHUNK_LENGTH - 1) && get_block_type(x, y, z + 1) != BLOCK_TYPE::AIR) {
+        if (z < (CHUNK_LENGTH - 1) && getBlockType(x, y, z + 1) != BLOCK_TYPE::AIR) {
         	faces.back = false;
         }
 
         return faces;
 	}
 
-	void generate_mesh(int x, int y, int z, unsigned int &i, Faces &faces) {
+	void generateMesh(int x, int y, int z, unsigned int &i, Faces &faces) {
 		if (faces.front) {
 			Vertex front[] = {
 				{{x - 0.5f, y + 0.5f, z - 0.5f}, {0.0f, 0.0f}},

@@ -3,7 +3,7 @@
 
 class Texture {
 public:
-    Texture(const char *texture_path) {
+    Texture(const char *texturePath) {
         glGenTextures(1, &ID);
         glBindTexture(GL_TEXTURE_2D, ID);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -11,7 +11,7 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-        SDL_Surface *surface = IMG_Load(texture_path);
+        SDL_Surface *surface = IMG_Load(texturePath);
 
         if (surface->pixels) {
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels);
@@ -20,7 +20,7 @@ public:
             SDL_FreeSurface(surface);
         }
         else {
-            std::cerr << "Falha ao carregar textura: " << texture_path << std::endl;
+            std::cerr << "Falha ao carregar textura: " << texturePath << std::endl;
         }
     }
 
