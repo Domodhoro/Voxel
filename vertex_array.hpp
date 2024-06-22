@@ -3,7 +3,7 @@
 
 struct Vertex {
     glm::vec3 coordinates;
-    glm::vec2 texture_coordinates;
+    glm::vec2 textureCoordinates;
 };
 
 class VertexArray {
@@ -26,7 +26,7 @@ public:
         glVertexAttribPointer(0, 3, GL_FLOAT, false, 5 * sizeof(float), (void*)offsetof(Vertex, coordinates));
         glEnableVertexAttribArray(0);
 
-        glVertexAttribPointer(1, 2, GL_FLOAT, false, 5 * sizeof(float), (void*)offsetof(Vertex, texture_coordinates));
+        glVertexAttribPointer(1, 2, GL_FLOAT, false, 5 * sizeof(float), (void*)offsetof(Vertex, textureCoordinates));
         glEnableVertexAttribArray(1);
 	}
 
