@@ -1,5 +1,8 @@
 #include <iostream>
+#include <string>
 #include <vector>
+#include <array>
+#include <map>
 #include <algorithm>
 
 #ifdef _WIN32
@@ -17,7 +20,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #ifdef _WIN32
-#include <lua/lua.hpp>
+#include <lua54/lua.hpp>
 #elif __linux__
 extern "C" {
 #include "./lua54/lua.h"
@@ -33,29 +36,62 @@ extern "C" {
 #define SRC_HEIGHT 600
 #define FPS 60
 #define CHUNK_WIDTH 16
-#define CHUNK_HEIGHT 128
+#define CHUNK_HEIGHT 16
 #define CHUNK_LENGTH 16
 
-#include "./shader.hpp"
-#include "./vertex_array.hpp"
-#include "./texture.hpp"
-#include "./camera.hpp"
-#include "./chunk.hpp"
-
-lua_State *initLua();
+#include "./src/shaderProgram.hpp"
+#include "./src/blockFaces.hpp"
+#include "./src/vertexArray.hpp"
+#include "./src/texture.hpp"
+#include "./src/camera.hpp"
+#include "./src/AABB.hpp"
+#include "./src/chunk.hpp"
+#include "./src/skybox.hpp"
 
 void framebufferSizeCallback(GLFWwindow *window, int width, int height);
 void keyboardCallback(GLFWwindow *window, Camera &camera);
 void mouseCallback(GLFWwindow *window, Camera &camera);
 
-Shader createShaderProgram(lua_State *L);
-
 int main() {
-    lua_State *L = initLua();
+    lua_State *L = luaL_newstate();
 
     if (!L) {
+        std::cerr << "Falha ao criar estado lua." << std::endl;
+
         return -1;
     }
+
+    luaL_openlibs(L);
+
+    if (luaL_dofile(L, "./shaders/shaders.lua") != LUA_OK) {
+        std::cerr << "Falha ao ler arquivo lua: " << lua_tostring(L, -1) << std::endl;
+
+        return -1;
+    }
+
+    lua_getglobal(L, "chunkVertexShaderSource");
+
+    const char *chunkVertexShaderSource = lua_tostring(L, -1);
+
+    lua_pop(L, 1);
+
+    lua_getglobal(L, "chunkFragmentShaderSource");
+
+    const char *chunkFragmentShaderSource = lua_tostring(L, -1);
+
+    lua_pop(L, 1);
+
+    lua_getglobal(L, "skyboxVertexShaderSource");
+
+    const char *skyboxVertexShaderSource = lua_tostring(L, -1);
+
+    lua_pop(L, 1);
+
+    lua_getglobal(L, "skyboxFragmentShaderSource");
+
+    const char *skyboxFragmentShaderSource = lua_tostring(L, -1);
+
+    lua_pop(L, 1);
 
     if (glfwInit() == GLFW_NOT_INITIALIZED) {
         std::cerr << "Falha ao iniciar GLFW." << std::endl;
@@ -79,10 +115,14 @@ int main() {
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
+#if _WIN32
     const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 
     glfwSetWindowPos(window, (mode->width - SRC_WIDTH) / 2, (mode->height - SRC_HEIGHT) / 2);
     glfwSetCursorPos(window, SRC_WIDTH / 2, SRC_HEIGHT / 2);
+#endif
+
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     if (glewInit() != GLEW_OK) {
         std::cerr << "Falha ao iniciar GLEW." << std::endl;
@@ -90,19 +130,31 @@ int main() {
         return -1;
     }
 
-    Shader shader = createShaderProgram(L);
+    ShaderProgram chunkShaderProgram(chunkVertexShaderSource, chunkFragmentShaderSource);
+    ShaderProgram skyboxShaderProgram(skyboxVertexShaderSource, skyboxFragmentShaderSource);
 
-    Texture texture("./block.png");
+    Texture textures;
 
-    Camera camera({0.0f, 0.0f, -3.0f});
+    textures.load("./img/blocks.png", "BLOCKS");
 
+    std::vector<std::string> skyboxTexture {
+        "img/skybox/right.png",
+        "img/skybox/left.png",
+        "img/skybox/up.png",
+        "img/skybox/down.png",
+        "img/skybox/front.png",
+        "img/skybox/back.png"
+    };
+
+    textures.load(skyboxTexture, "SKYBOX");
+
+    Camera camera({0.0f, 0.0f, 20.0f});
     Chunk chunk({0.0f, 0.0f, 0.0f});
-
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    Skybox skybox;
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
+    glFrontFace(GL_CCW);
 
     double lastFrame = 0.0, currentFrame = 0.0;
 
@@ -116,7 +168,17 @@ int main() {
             keyboardCallback(window, camera);
             mouseCallback(window, camera);
 
-            chunk.draw(shader, texture, camera);
+            if (chunk.checkCollision(camera)) {
+                
+            }
+
+            skybox.draw(skyboxShaderProgram, textures, camera);
+
+            glCullFace(GL_FRONT);
+            
+            chunk.draw(chunkShaderProgram, textures, camera);
+
+            glCullFace(GL_BACK);
 
             glfwSwapBuffers(window);
             glfwPollEvents();
@@ -125,27 +187,11 @@ int main() {
         }
     }
 
+    glfwTerminate();
+
+    lua_close(L);
+
     return 0;
-}
-
-lua_State *initLua() {
-    lua_State *L = luaL_newstate();
-
-    if (!L) {
-        std::cerr << "Falha ao criar estado lua." << std::endl;
-
-        return nullptr;
-    }
-
-    luaL_openlibs(L);
-
-    if (luaL_dofile(L, "./script.lua") != LUA_OK) {
-        std::cerr << "Falha ao ler arquivo lua: " << lua_tostring(L, -1) << std::endl;
-
-        return nullptr;
-    }
-
-    return L;
 }
 
 void framebufferSizeCallback(GLFWwindow *window, int width, int height) {
@@ -157,7 +203,7 @@ void keyboardCallback(GLFWwindow *window, Camera &camera) {
         glfwSetWindowShouldClose(window, true);
     }
 
-    float cameraSpeed = 0.2f;
+    float cameraSpeed = 0.1f;
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         camera.keyboardUpdate(CAMERA_MOVEMENTS::FORWARD, cameraSpeed);
@@ -173,6 +219,16 @@ void keyboardCallback(GLFWwindow *window, Camera &camera) {
 
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         camera.keyboardUpdate(CAMERA_MOVEMENTS::LEFT, cameraSpeed);
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+        if (glfwGetKey(window, GLFW_KEY_SPACE)) {
+            camera.toUp(2.0f * cameraSpeed);
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_G)) {
+            camera.toDown(2.0f * cameraSpeed);
+        }
     }
 }
 
@@ -198,20 +254,4 @@ void mouseCallback(GLFWwindow *window, Camera &camera) {
     double cameraSensitivity = 0.1;
 
     camera.mouseUpdate(xOffset, yOffset, cameraSensitivity);
-}
-
-Shader createShaderProgram(lua_State *L) {
-    lua_getglobal(L, "vertexShaderSource");
-
-    const char *vertexShaderSource = lua_tostring(L, -1);
-
-    lua_pop(L, 1);
-
-    lua_getglobal(L, "fragmentShaderSource");
-
-    const char *fragmentShaderSource = lua_tostring(L, -1);
-
-    lua_pop(L, 1);
-
-    return Shader(vertexShaderSource, fragmentShaderSource);
 }
