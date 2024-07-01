@@ -1,0 +1,6 @@
+{
+    "shell_cmd": "bash -c 'cd \"${file_path}\" && g++ -std=c++17 -o \"VoxelEngine\" \"${file}\" -lm -lSDL2 -lSDL2_image -lglfw -lGL -lGLEW \"liblua54.a\" && ./\"VoxelEngine\"'",
+    "file_regex": "^(...*?):([0-9]*):?([0-9]*)",
+    "working_dir": "${file_path}",
+    "selector": "source.c, source.c++"
+}
