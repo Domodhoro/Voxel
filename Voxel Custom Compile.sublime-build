@@ -1,6 +1,0 @@
-{
-    "shell_cmd": "g++ -std=c++11 -Wall -o \"${file_path}/VoxelEngine.exe\" \"${file}\" -I\"C:/MinGW/include/GLFW\" -I\"C:/MinGW/include\" -L\"C:/MinGW/bin\" -L\"C:/MinGW/lib\" -lopengl32 -lgdi32 -lglew32 -lglfw3dll -llua54 -lm -lSDL2 -lSDL2_image -luser32 && \"${file_path}/VoxelEngine.exe\"",
-    "selector": "source.cpp",
-    "working_dir": "${file_path}",
-    "path": "C:\\MinGW\\bin;${path}",
-}
