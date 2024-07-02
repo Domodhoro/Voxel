@@ -9,7 +9,7 @@ public:
         vertexArray.bind<Vertex3D>(vertices, indices, 3, 2);
     }
 
-    void draw(ShaderProgram &shaderProgram, Texture &texture, Camera &camera) const {
+    void render(ShaderProgram &shaderProgram, Texture &texture, Camera &camera) const {
         glDepthMask(GL_FALSE);
 
         shaderProgram.use();
@@ -34,15 +34,15 @@ protected:
     VertexArray vertexArray;
 
     std::vector<Vertex3D> vertices;
-    std::vector<unsigned int> indices;
+    std::vector<u_int> indices;
 
     void generateMesh() {
-        auto front = createBlockFrontFace(0.0f, 0.0f, 0.0f);
-        auto back = createBlockBackFace(0.0f, 0.0f, 0.0f);
-        auto right = createBlockRightFace(0.0f, 0.0f, 0.0f);
-        auto left = createBlockLeftFace(0.0f, 0.0f, 0.0f);
-        auto up = createBlockUpFace(0.0f, 0.0f, 0.0f);
-        auto down = createBlockDownFace(0.0f, 0.0f, 0.0f);
+        CubeFace front = createCubeFrontFace(0.0f, 0.0f, 0.0f);
+        CubeFace back = createCubeBackFace(0.0f, 0.0f, 0.0f);
+        CubeFace right = createCubeRightFace(0.0f, 0.0f, 0.0f);
+        CubeFace left = createCubeLeftFace(0.0f, 0.0f, 0.0f);
+        CubeFace up = createCubeUpFace(0.0f, 0.0f, 0.0f);
+        CubeFace down = createCubeDownFace(0.0f, 0.0f, 0.0f);
 
         vertices.insert(vertices.end(), std::begin(front), std::end(front));
         vertices.insert(vertices.end(), std::begin(back), std::end(back));
@@ -51,7 +51,7 @@ protected:
         vertices.insert(vertices.end(), std::begin(up), std::end(up));
         vertices.insert(vertices.end(), std::begin(down), std::end(down));
 
-        unsigned int indexArrayData[] = {
+        u_int indexArrayData[] = {
             0u,   1u,  3u,  3u,  1u,  2u,
             5u,   4u,  7u,  5u,  7u,  6u,
             8u,   9u, 11u, 11u,  9u, 10u,

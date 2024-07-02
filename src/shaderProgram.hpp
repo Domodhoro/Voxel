@@ -4,8 +4,8 @@
 class ShaderProgram {
 public:
     ShaderProgram(const std::string &vertexShaderSource, const std::string &fragmentShaderSource) {
-        unsigned int vertex = compileShader(vertexShaderSource.c_str(), GL_VERTEX_SHADER);
-        unsigned int fragment = compileShader(fragmentShaderSource.c_str(), GL_FRAGMENT_SHADER);
+        u_int vertex = compileShader(vertexShaderSource.c_str(), GL_VERTEX_SHADER);
+        u_int fragment = compileShader(fragmentShaderSource.c_str(), GL_FRAGMENT_SHADER);
 
         int success = 0;
 
@@ -78,12 +78,12 @@ public:
         glUniformMatrix4fv(glGetUniformLocation(ID, name), 1, false, glm::value_ptr(matrix));
     }
 protected:
-    unsigned int ID = 0u;
+    u_int ID = 0u;
 
-    unsigned int compileShader(const char *shaderSource, GLenum shaderType) {
+    u_int compileShader(const char *shaderSource, GLenum shaderType) {
         int success = 0;
 
-        unsigned int shader = glCreateShader(shaderType);
+        u_int shader = glCreateShader(shaderType);
 
         glShaderSource(shader, 1, &shaderSource, nullptr);
         glCompileShader(shader);

@@ -10,13 +10,9 @@ enum class CAMERA_MOVEMENTS {
 
 class Camera {
 public:
-    Camera() : position(0.0f) {
-        
-    }
+    Camera() : position(0.0f) { }
 
-    Camera(glm::vec3 position) : position(position) {
-
-    }
+    Camera(glm::vec3 position) : position(position) { }
 
     void toUp(float speed) {
         position.y += speed;
@@ -35,7 +31,9 @@ public:
     }
 
     glm::mat4 getProjection() const { 
-        return glm::perspective(glm::radians(FOV), static_cast<double>(SRC_WIDTH) / static_cast<double>(SRC_HEIGHT), near, far);
+        double aspect = static_cast<double>(SRC_WIDTH) / static_cast<double>(SRC_HEIGHT);
+
+        return glm::perspective(glm::radians(FOV), aspect, near, far);
     }
 
     glm::mat4 getView() const {

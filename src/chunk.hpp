@@ -2,7 +2,10 @@
 #define CHUNK_HPP
 
 enum class BLOCK_TYPE {
-    AIR, GRASS, DIRT
+    AIR,
+    GRASS,
+    DIRT,
+    STONE
 };
 
 class Chunk {
@@ -12,7 +15,7 @@ public:
 
     	std::fill(blocks.begin(), blocks.end(), BLOCK_TYPE::GRASS);
 
-    	unsigned int i = 0u;
+    	u_int i = 0u;
 
     	for (int x = 0; x != CHUNK_WIDTH; x++) {
     		for (int y = 0; y != CHUNK_HEIGHT; y++) {
@@ -63,7 +66,20 @@ public:
 	    return false;
 	}
 
-    void draw(ShaderProgram &shaderProgram, Texture &texture, Camera &camera) const {
+	bool renderLimit(Camera &camera) {
+	    glm::vec3 cameraPosition = camera.getPosition();
+	    glm::vec3 chunkCenter = position + glm::vec3(CHUNK_WIDTH, CHUNK_HEIGHT, CHUNK_LENGTH) / 2.0f;
+
+	    float distance = glm::distance(cameraPosition, chunkCenter);
+
+	    if (distance < RENDER_LIMIT_DISTANCE) {
+	        return true;
+	    }
+
+	    return false;
+	}
+
+    void render(ShaderProgram &shaderProgram, Texture &texture, Camera &camera) const {
         shaderProgram.use();
 
         glm::mat4 model = glm::mat4(1.0f);
@@ -89,12 +105,10 @@ protected:
 
     std::vector<BLOCK_TYPE> blocks;
     std::vector<Vertex3D> vertices;
-	std::vector<unsigned int> indices;
+	std::vector<u_int> indices;
 
 	Faces otimization(int x, int y, int z) {
-		Faces faces = {
-			true, true, true, true, true, true
-		};
+		Faces faces;
 
     	if (x > 0 && getBlockType(x - 1, y, z) != BLOCK_TYPE::AIR) {
 			faces.left = false;
@@ -123,86 +137,86 @@ protected:
         return faces;
 	}
 
-	void generateMesh(int x, int y, int z, unsigned int &i, Faces &faces) {
+	void generateMesh(int x, int y, int z, u_int &i, Faces &faces) {
 		if (faces.front) {
-			auto front = createBlockFrontFace(x, y, z);
+			auto front = createCubeFrontFace(x, y, z);
 
-			vertices.insert(vertices.end(), std::begin(front), std::end(front));
-
-			unsigned int frontIndices[] = {
-	        	i + 0u, i + 1u, i + 3u, i + 3u, i + 1u, i + 2u
+			u_int frontIndices[] = {
+	        	i + 0u, i + 1u, i + 3u, 
+	        	i + 3u, i + 1u, i + 2u
 	        };
 
+	        vertices.insert(vertices.end(), std::begin(front), std::end(front));
 	        indices.insert(indices.end(), std::begin(frontIndices), std::end(frontIndices));
 
 	        i += 4u;
 		}
 
 		if (faces.back) {
-			auto back = createBlockBackFace(x, y, z);
+			auto back = createCubeBackFace(x, y, z);
 
-			vertices.insert(vertices.end(), std::begin(back), std::end(back));
-
-			unsigned int backIndices[] = {
-	        	i + 1u, i + 0u, i + 3u, i + 1u, i + 3u, i + 2u
+			u_int backIndices[] = {
+	        	i + 1u, i + 0u, i + 3u, 
+	        	i + 1u, i + 3u, i + 2u
 	        };
 
+	        vertices.insert(vertices.end(), std::begin(back), std::end(back));
 	        indices.insert(indices.end(), std::begin(backIndices), std::end(backIndices));
 
 			i += 4u;
 		}
 
 		if (faces.right) {
-			auto right = createBlockRightFace(x, y, z);
+			auto right = createCubeRightFace(x, y, z);
 
-			vertices.insert(vertices.end(), std::begin(right), std::end(right));
-
-			unsigned int rightIndices[] = {
-	        	i + 0u, i + 1u, i + 3u, i + 3u, i + 1u, i + 2u
+			u_int rightIndices[] = {
+	        	i + 0u, i + 1u, i + 3u, 
+	        	i + 3u, i + 1u, i + 2u
 	        };
 
+	        vertices.insert(vertices.end(), std::begin(right), std::end(right));
 	        indices.insert(indices.end(), std::begin(rightIndices), std::end(rightIndices));
 
 			i += 4u;
 		}
 
 		if (faces.left) {
-			auto left = createBlockLeftFace(x, y, z);
+			auto left = createCubeLeftFace(x, y, z);
 
-			vertices.insert(vertices.end(), std::begin(left), std::end(left));
-
-			unsigned int leftIndices[] = {
-	        	i + 1u, i + 0u, i + 3u, i + 1u, i + 3u, i + 2u
+			u_int leftIndices[] = {
+	        	i + 1u, i + 0u, i + 3u, 
+	        	i + 1u, i + 3u, i + 2u
 	        };
 
+	        vertices.insert(vertices.end(), std::begin(left), std::end(left));
 	        indices.insert(indices.end(), std::begin(leftIndices), std::end(leftIndices));
 
 			i += 4u;
 		}
 
 		if (faces.up) {
-			auto up = createBlockUpFace(x, y, z);
+			auto up = createCubeUpFace(x, y, z);
 
-			vertices.insert(vertices.end(), std::begin(up), std::end(up));
-
-			unsigned int upIndices[] = {
-	        	i + 0u, i + 1u, i + 3u, i + 3u, i + 1u, i + 2u
+			u_int upIndices[] = {
+	        	i + 0u, i + 1u, i + 3u, 
+	        	i + 3u, i + 1u, i + 2u
 	        };
 
+	        vertices.insert(vertices.end(), std::begin(up), std::end(up));
 	        indices.insert(indices.end(), std::begin(upIndices), std::end(upIndices));
 
 			i += 4u;
 		}
 
 		if (faces.down) {
-			auto down = createBlockDownFace(x, y, z);
+			auto down = createCubeDownFace(x, y, z);
 
-			vertices.insert(vertices.end(), std::begin(down), std::end(down));
-
-			unsigned int downIndices[] = {
-	        	i + 1u, i + 0u, i + 3u, i + 1u, i + 3u, i + 2u
+			u_int downIndices[] = {
+	        	i + 1u, i + 0u, i + 3u, 
+	        	i + 1u, i + 3u, i + 2u
 	        };
 
+	        vertices.insert(vertices.end(), std::begin(down), std::end(down));
 	        indices.insert(indices.end(), std::begin(downIndices), std::end(downIndices));
 
 			i += 4u;

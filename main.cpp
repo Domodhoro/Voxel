@@ -6,7 +6,7 @@
 #include <algorithm>
 
 #ifdef _WIN32
-#define SDL_MAIN_HANDLED
+    #define SDL_MAIN_HANDLED
 #endif
 
 #include <SDL2/SDL.h>
@@ -20,13 +20,13 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #ifdef _WIN32
-#include <lua54/lua.hpp>
+    #include <lua54/lua.hpp>
 #elif __linux__
-extern "C" {
-#include "./lua54/lua.h"
-#include "./lua54/lualib.h"
-#include "./lua54/lauxlib.h"
-}
+    extern "C" {
+        #include "./lua54/lua.h"
+        #include "./lua54/lualib.h"
+        #include "./lua54/lauxlib.h"
+    }
 #endif
 
 #define FNL_IMPL
@@ -38,9 +38,10 @@ extern "C" {
 #define CHUNK_WIDTH 16
 #define CHUNK_HEIGHT 16
 #define CHUNK_LENGTH 16
+#define RENDER_LIMIT_DISTANCE 16 * 4
 
 #include "./src/shaderProgram.hpp"
-#include "./src/blockFaces.hpp"
+#include "./src/cubeFaces.hpp"
 #include "./src/vertexArray.hpp"
 #include "./src/texture.hpp"
 #include "./src/camera.hpp"
@@ -52,7 +53,7 @@ void framebufferSizeCallback(GLFWwindow *window, int width, int height);
 void keyboardCallback(GLFWwindow *window, Camera &camera);
 void mouseCallback(GLFWwindow *window, Camera &camera);
 
-int main() {
+int main(int argc, char *argv[]) {
     lua_State *L = luaL_newstate();
 
     if (!L) {
@@ -168,15 +169,15 @@ int main() {
             keyboardCallback(window, camera);
             mouseCallback(window, camera);
 
-            if (chunk.checkCollision(camera)) {
-                
-            }
+            if (chunk.checkCollision(camera)) { }
 
-            skybox.draw(skyboxShaderProgram, textures, camera);
+            skybox.render(skyboxShaderProgram, textures, camera);
 
             glCullFace(GL_FRONT);
             
-            chunk.draw(chunkShaderProgram, textures, camera);
+            if (chunk.renderLimit(camera)) {
+                chunk.render(chunkShaderProgram, textures, camera);
+            }
 
             glCullFace(GL_BACK);
 

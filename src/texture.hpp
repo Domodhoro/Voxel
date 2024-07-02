@@ -4,7 +4,7 @@
 class Texture {
 public:
     void load(const std::string &texturePath, const std::string &textureName) {
-        unsigned int textureID = 0u;
+        u_int textureID = 0u;
 
         glGenTextures(1, &textureID);
         glBindTexture(GL_TEXTURE_2D, textureID);
@@ -29,7 +29,7 @@ public:
     }
 
     void load(const std::vector<std::string> &faces, const std::string &textureName) {
-        unsigned int textureID = 0u;
+        u_int textureID = 0u;
 
         glGenTextures(1, &textureID);
         glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
@@ -70,7 +70,7 @@ public:
         glBindTexture(textureType, 0u);
     }
 protected:
-    std::map<std::string, unsigned int> textures;
+    std::map<std::string, u_int> textures;
 };
 
 #endif
