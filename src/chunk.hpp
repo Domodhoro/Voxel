@@ -139,7 +139,7 @@ protected:
 
 	void generateMesh(int x, int y, int z, u_int &i, Faces &faces) {
 		if (faces.front) {
-			auto front = createCubeFrontFace(x, y, z);
+			CubeFace front = createCubeFrontFace(x, y, z);
 
 			u_int frontIndices[] = {
 	        	i + 0u, i + 1u, i + 3u, 
@@ -153,7 +153,7 @@ protected:
 		}
 
 		if (faces.back) {
-			auto back = createCubeBackFace(x, y, z);
+			CubeFace back = createCubeBackFace(x, y, z);
 
 			u_int backIndices[] = {
 	        	i + 1u, i + 0u, i + 3u, 
@@ -167,7 +167,7 @@ protected:
 		}
 
 		if (faces.right) {
-			auto right = createCubeRightFace(x, y, z);
+			CubeFace right = createCubeRightFace(x, y, z);
 
 			u_int rightIndices[] = {
 	        	i + 0u, i + 1u, i + 3u, 
@@ -181,7 +181,7 @@ protected:
 		}
 
 		if (faces.left) {
-			auto left = createCubeLeftFace(x, y, z);
+			CubeFace left = createCubeLeftFace(x, y, z);
 
 			u_int leftIndices[] = {
 	        	i + 1u, i + 0u, i + 3u, 
@@ -195,7 +195,7 @@ protected:
 		}
 
 		if (faces.up) {
-			auto up = createCubeUpFace(x, y, z);
+			CubeFace up = createCubeUpFace(x, y, z);
 
 			u_int upIndices[] = {
 	        	i + 0u, i + 1u, i + 3u, 
@@ -209,7 +209,7 @@ protected:
 		}
 
 		if (faces.down) {
-			auto down = createCubeDownFace(x, y, z);
+			CubeFace down = createCubeDownFace(x, y, z);
 
 			u_int downIndices[] = {
 	        	i + 1u, i + 0u, i + 3u, 

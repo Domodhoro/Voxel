@@ -44,13 +44,6 @@ protected:
         CubeFace up = createCubeUpFace(0.0f, 0.0f, 0.0f);
         CubeFace down = createCubeDownFace(0.0f, 0.0f, 0.0f);
 
-        vertices.insert(vertices.end(), std::begin(front), std::end(front));
-        vertices.insert(vertices.end(), std::begin(back), std::end(back));
-        vertices.insert(vertices.end(), std::begin(right), std::end(right));
-        vertices.insert(vertices.end(), std::begin(left), std::end(left));
-        vertices.insert(vertices.end(), std::begin(up), std::end(up));
-        vertices.insert(vertices.end(), std::begin(down), std::end(down));
-
         u_int indexArrayData[] = {
             0u,   1u,  3u,  3u,  1u,  2u,
             5u,   4u,  7u,  5u,  7u,  6u,
@@ -60,6 +53,12 @@ protected:
             21u, 20u, 23u, 21u, 23u, 22u
         };
 
+        vertices.insert(vertices.end(), std::begin(front), std::end(front));
+        vertices.insert(vertices.end(), std::begin(back), std::end(back));
+        vertices.insert(vertices.end(), std::begin(right), std::end(right));
+        vertices.insert(vertices.end(), std::begin(left), std::end(left));
+        vertices.insert(vertices.end(), std::begin(up), std::end(up));
+        vertices.insert(vertices.end(), std::begin(down), std::end(down));
         indices.insert(indices.end(), std::begin(indexArrayData), std::end(indexArrayData));
     }
 };
