@@ -32,67 +32,38 @@
 #define FNL_IMPL
 #include "./FastNoiseLite.h"
 
-#define SRC_WIDTH 1200
-#define SRC_HEIGHT 600
-#define FPS 60
-#define CHUNK_WIDTH 16
-#define CHUNK_HEIGHT 16
-#define CHUNK_LENGTH 16
-#define RENDER_LIMIT_DISTANCE 16 * 4
+#define SRC_TITLE "Voxel Engine 1.0"
+#define SRC_WIDTH 1024
+#define SRC_HEIGHT 768
+#define FPS 80
+#define CHUNK_WIDTH 8
+#define CHUNK_HEIGHT 8
+#define CHUNK_LENGTH 8
+#define RENDER_LIMIT_DISTANCE 64
+#define CAMERA_WIDTH 1.0
+#define CAMERA_HEIGHT 2.0
+#define CAMERA_LENGTH 1.0
 
+#include "./src/color.hpp"
+#include "./src/lua.hpp"
 #include "./src/shaderProgram.hpp"
-#include "./src/cubeFaces.hpp"
+#include "./src/geometry.hpp"
 #include "./src/vertexArray.hpp"
 #include "./src/texture.hpp"
-#include "./src/camera.hpp"
 #include "./src/AABB.hpp"
-#include "./src/chunk.hpp"
+#include "./src/camera.hpp"
+#include "./src/frameBox.hpp"
 #include "./src/skybox.hpp"
+#include "./src/chunk.hpp"
+#include "./src/chunkManager.hpp"
+#include "./src/inputs.hpp"
 
-void framebufferSizeCallback(GLFWwindow *window, int width, int height);
-void keyboardCallback(GLFWwindow *window, Camera &camera);
-void mouseCallback(GLFWwindow *window, Camera &camera);
-
-int main(int argc, char *argv[]) {
-    lua_State *L = luaL_newstate();
+int main() {
+    lua_State *L = lua_init();
 
     if (!L) {
-        std::cerr << "Falha ao criar estado lua." << std::endl;
-
         return -1;
     }
-
-    luaL_openlibs(L);
-
-    if (luaL_dofile(L, "./shaders/shaders.lua") != LUA_OK) {
-        std::cerr << "Falha ao ler arquivo lua: " << lua_tostring(L, -1) << std::endl;
-
-        return -1;
-    }
-
-    lua_getglobal(L, "chunkVertexShaderSource");
-
-    const char *chunkVertexShaderSource = lua_tostring(L, -1);
-
-    lua_pop(L, 1);
-
-    lua_getglobal(L, "chunkFragmentShaderSource");
-
-    const char *chunkFragmentShaderSource = lua_tostring(L, -1);
-
-    lua_pop(L, 1);
-
-    lua_getglobal(L, "skyboxVertexShaderSource");
-
-    const char *skyboxVertexShaderSource = lua_tostring(L, -1);
-
-    lua_pop(L, 1);
-
-    lua_getglobal(L, "skyboxFragmentShaderSource");
-
-    const char *skyboxFragmentShaderSource = lua_tostring(L, -1);
-
-    lua_pop(L, 1);
 
     if (glfwInit() == GLFW_NOT_INITIALIZED) {
         std::cerr << "Falha ao iniciar GLFW." << std::endl;
@@ -103,9 +74,22 @@ int main(int argc, char *argv[]) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
+#endif
+
+    GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+
+    if (!monitor) {
+        std::cerr << "Falha ao acessar monitor." << std::endl;
+
+        return -1;
+    }
+
     glfwWindowHint(GLFW_RESIZABLE, false);
 
-    GLFWwindow *window = glfwCreateWindow(SRC_WIDTH, SRC_HEIGHT, "Voxel Engine 1.0", nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(SRC_WIDTH, SRC_HEIGHT, SRC_TITLE, nullptr, nullptr);
 
     if (!window) {
         std::cerr << "Falha ao criar a janela de visualização." << std::endl;
@@ -114,16 +98,23 @@ int main(int argc, char *argv[]) {
     }
 
     glfwMakeContextCurrent(window);
+
+    auto framebufferSizeCallback = [](GLFWwindow *window, int width, int height) {
+        glViewport(0, 0, width, height);
+    };
+    
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
-#if _WIN32
-    const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+    const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+
+    if (!mode) {
+        std::cerr << "Falha ao acessar modo de vídeo." << std::endl;
+
+        return -1;
+    }
 
     glfwSetWindowPos(window, (mode->width - SRC_WIDTH) / 2, (mode->height - SRC_HEIGHT) / 2);
     glfwSetCursorPos(window, SRC_WIDTH / 2, SRC_HEIGHT / 2);
-#endif
-
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     if (glewInit() != GLEW_OK) {
         std::cerr << "Falha ao iniciar GLEW." << std::endl;
@@ -131,12 +122,16 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    std::string chunkVertexShaderSource = luaToString(L, "chunkVertexShaderSource");
+    std::string chunkFragmentShaderSource = luaToString(L, "chunkFragmentShaderSource");
+    std::string skyboxVertexShaderSource = luaToString(L, "skyboxVertexShaderSource");
+    std::string skyboxFragmentShaderSource = luaToString(L, "skyboxFragmentShaderSource");
+    std::string frameBoxVertexShaderSource = luaToString(L, "frameBoxVertexShaderSource");
+    std::string frameBoxFragmentShaderSource = luaToString(L, "frameBoxFragmentShaderSource");
+
     ShaderProgram chunkShaderProgram(chunkVertexShaderSource, chunkFragmentShaderSource);
     ShaderProgram skyboxShaderProgram(skyboxVertexShaderSource, skyboxFragmentShaderSource);
-
-    Texture textures;
-
-    textures.load("./img/blocks.png", "BLOCKS");
+    ShaderProgram frameBoxShaderProgram(frameBoxVertexShaderSource, frameBoxFragmentShaderSource);
 
     std::vector<std::string> skyboxTexture {
         "img/skybox/right.png",
@@ -147,11 +142,32 @@ int main(int argc, char *argv[]) {
         "img/skybox/back.png"
     };
 
+    Texture textures;
+
+    textures.load("./img/blocks.png", "BLOCKS");
     textures.load(skyboxTexture, "SKYBOX");
 
-    Camera camera({0.0f, 0.0f, 20.0f});
-    Chunk chunk({0.0f, 0.0f, 0.0f});
+    Camera camera(SRC_WIDTH, SRC_HEIGHT);
+
+    camera.setPosition({-16.0f, 0.0f, 16.0f});
+    camera.setFOV(60);
+
     Skybox skybox;
+
+    ChunkManager chunkManager;
+
+    chunkManager.addChunk({ 16.0f,  0.0f,  0.0f});
+    chunkManager.addChunk({-16.0f,  0.0f,  0.0f});
+    chunkManager.addChunk({  0.0f, 16.0f,  0.0f});
+    chunkManager.addChunk({  0.0f,-16.0f,  0.0f});
+    chunkManager.addChunk({  0.0f,  0.0f, 16.0f});
+    chunkManager.addChunk({  0.0f,  0.0f,-16.0f});
+
+    FrameBox frameBox;
+
+    frameBox.setPosition({-2.0f, 0.0f, 0.0f});
+
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -163,24 +179,30 @@ int main(int argc, char *argv[]) {
         currentFrame = glfwGetTime();
 
         if ((currentFrame - lastFrame) > (1.0f / FPS)) {
-            glClearColor(0.5f, 0.5f, 1.0f, 1.0f);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             keyboardCallback(window, camera);
             mouseCallback(window, camera);
 
-            if (chunk.checkCollision(camera)) { }
+            /*
+            if (chunkManager.checkCollision(camera)) {
+                glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            }
+            */
+
+            glDepthMask(false);
 
             skybox.render(skyboxShaderProgram, textures, camera);
 
+            glDepthMask(true);
             glCullFace(GL_FRONT);
             
-            if (chunk.renderLimit(camera)) {
-                chunk.render(chunkShaderProgram, textures, camera);
-            }
+            chunkManager.render(chunkShaderProgram, textures, camera);
+            frameBox.render(frameBoxShaderProgram, camera, GREEN, glm::vec3(1.0f));
 
             glCullFace(GL_BACK);
-
             glfwSwapBuffers(window);
             glfwPollEvents();
 
@@ -193,66 +215,4 @@ int main(int argc, char *argv[]) {
     lua_close(L);
 
     return 0;
-}
-
-void framebufferSizeCallback(GLFWwindow *window, int width, int height) {
-    glViewport(0, 0, width, height);
-}
-
-void keyboardCallback(GLFWwindow *window, Camera &camera) {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, true);
-    }
-
-    float cameraSpeed = 0.1f;
-
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        camera.keyboardUpdate(CAMERA_MOVEMENTS::FORWARD, cameraSpeed);
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        camera.keyboardUpdate(CAMERA_MOVEMENTS::BACKWARD, cameraSpeed);
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        camera.keyboardUpdate(CAMERA_MOVEMENTS::RIGHT, cameraSpeed);
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        camera.keyboardUpdate(CAMERA_MOVEMENTS::LEFT, cameraSpeed);
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-        if (glfwGetKey(window, GLFW_KEY_SPACE)) {
-            camera.toUp(2.0f * cameraSpeed);
-        }
-
-        if (glfwGetKey(window, GLFW_KEY_G)) {
-            camera.toDown(2.0f * cameraSpeed);
-        }
-    }
-}
-
-void mouseCallback(GLFWwindow *window, Camera &camera) {
-    double x = 0.0, y = 0.0;
-
-    glfwGetCursorPos(window, &x, &y);
-
-    static bool firstMouse = true;
-    static double lastX = 0.0, lastY = 0.0;
-
-    if (firstMouse) {
-        lastX = x;
-        lastY = y;
-        firstMouse = false;
-    }
-
-    double xOffset = x - lastX, yOffset = lastY -y;
-
-    lastX = x;
-    lastY = y;
-
-    double cameraSensitivity = 0.1;
-
-    camera.mouseUpdate(xOffset, yOffset, cameraSensitivity);
 }

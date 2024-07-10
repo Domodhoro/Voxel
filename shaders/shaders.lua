@@ -78,3 +78,27 @@ void main() {
     FragColor = texture(Cube, fs_in.Texture);
 }
 ]]
+
+frameBoxVertexShaderSource = [[
+#version 330 core
+
+layout(location = 0) in vec3 Position;
+
+uniform mat4 Projection, View, Model;
+
+void main() {
+    gl_Position = Projection * View * Model * vec4(Position, 1.0f);
+}
+]]
+
+frameBoxFragmentShaderSource = [[
+#version 330 core
+
+out vec4 FragColor;
+
+uniform vec3 Color;
+
+void main() {
+    FragColor = vec4(Color, 1.0f);
+}
+]]
