@@ -33,8 +33,6 @@
 #include "./FastNoiseLite.h"
 
 #define SRC_TITLE "Voxel Engine 1.0"
-#define SRC_WIDTH 1024
-#define SRC_HEIGHT 768
 #define FPS 80
 #define CHUNK_WIDTH 8
 #define CHUNK_HEIGHT 8
@@ -56,12 +54,22 @@
 #include "./src/skybox.hpp"
 #include "./src/chunk.hpp"
 #include "./src/chunkManager.hpp"
-#include "./src/inputs.hpp"
+
+void framebufferSizeCallback(GLFWwindow *window, int width, int height) {
+    glViewport(0, 0, width, height);
+}
+
+void keyboardCallback(GLFWwindow *window, Camera &camera);
+void mouseCallback(GLFWwindow *window, Camera &camera);
 
 int main() {
-    lua_State *L = lua_init();
+    Lua lua;
 
-    if (!L) {
+    if (!lua.init()) {
+        return -1;
+    }
+
+    if (!lua.load()) {
         return -1;
     }
 
@@ -87,24 +95,6 @@ int main() {
         return -1;
     }
 
-    glfwWindowHint(GLFW_RESIZABLE, false);
-
-    GLFWwindow *window = glfwCreateWindow(SRC_WIDTH, SRC_HEIGHT, SRC_TITLE, nullptr, nullptr);
-
-    if (!window) {
-        std::cerr << "Falha ao criar a janela de visualização." << std::endl;
-
-        return -1;
-    }
-
-    glfwMakeContextCurrent(window);
-
-    auto framebufferSizeCallback = [](GLFWwindow *window, int width, int height) {
-        glViewport(0, 0, width, height);
-    };
-    
-    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-
     const GLFWvidmode *mode = glfwGetVideoMode(monitor);
 
     if (!mode) {
@@ -113,8 +103,27 @@ int main() {
         return -1;
     }
 
-    glfwSetWindowPos(window, (mode->width - SRC_WIDTH) / 2, (mode->height - SRC_HEIGHT) / 2);
-    glfwSetCursorPos(window, SRC_WIDTH / 2, SRC_HEIGHT / 2);
+    glfwWindowHint(GLFW_RESIZABLE, false);
+
+    int window_width = 1024, window_height = 768;
+
+    if (static_cast<int>(lua.toNumber("config", "fullscreen")) == 1) {
+        window_width = mode->width;
+        window_height = mode->height;
+    }
+
+    GLFWwindow *window = glfwCreateWindow(window_width, window_height, SRC_TITLE, nullptr, nullptr);
+
+    if (!window) {
+        std::cerr << "Falha ao criar a janela de visualização." << std::endl;
+
+        return -1;
+    }
+
+    glfwMakeContextCurrent(window);    
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+    glfwSetWindowPos(window, (mode->width - window_width) / 2, (mode->height - window_height) / 2);
+    glfwSetCursorPos(window, window_width / 2, window_height / 2);
 
     if (glewInit() != GLEW_OK) {
         std::cerr << "Falha ao iniciar GLEW." << std::endl;
@@ -122,16 +131,9 @@ int main() {
         return -1;
     }
 
-    std::string chunkVertexShaderSource = luaToString(L, "chunkVertexShaderSource");
-    std::string chunkFragmentShaderSource = luaToString(L, "chunkFragmentShaderSource");
-    std::string skyboxVertexShaderSource = luaToString(L, "skyboxVertexShaderSource");
-    std::string skyboxFragmentShaderSource = luaToString(L, "skyboxFragmentShaderSource");
-    std::string frameBoxVertexShaderSource = luaToString(L, "frameBoxVertexShaderSource");
-    std::string frameBoxFragmentShaderSource = luaToString(L, "frameBoxFragmentShaderSource");
-
-    ShaderProgram chunkShaderProgram(chunkVertexShaderSource, chunkFragmentShaderSource);
-    ShaderProgram skyboxShaderProgram(skyboxVertexShaderSource, skyboxFragmentShaderSource);
-    ShaderProgram frameBoxShaderProgram(frameBoxVertexShaderSource, frameBoxFragmentShaderSource);
+    ShaderProgram chunkShaderProgram(lua.toString("shaderSource", "chunkVertex"), lua.toString("shaderSource", "chunkFragment"));
+    ShaderProgram skyboxShaderProgram(lua.toString("shaderSource", "skyboxVertex"), lua.toString("shaderSource", "skyboxFragment"));
+    ShaderProgram frameBoxShaderProgram(lua.toString("shaderSource", "frameBoxVertex"), lua.toString("shaderSource", "frameBoxFragment"));
 
     std::vector<std::string> skyboxTexture {
         "img/skybox/right.png",
@@ -147,10 +149,10 @@ int main() {
     textures.load("./img/blocks.png", "BLOCKS");
     textures.load(skyboxTexture, "SKYBOX");
 
-    Camera camera(SRC_WIDTH, SRC_HEIGHT);
+    Camera camera(window_width, window_height);
 
     camera.setPosition({-16.0f, 0.0f, 16.0f});
-    camera.setFOV(60);
+    camera.setFOV(lua.toNumber("config", "FOV"));
 
     Skybox skybox;
 
@@ -185,13 +187,6 @@ int main() {
             keyboardCallback(window, camera);
             mouseCallback(window, camera);
 
-            /*
-            if (chunkManager.checkCollision(camera)) {
-                glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            }
-            */
-
             glDepthMask(false);
 
             skybox.render(skyboxShaderProgram, textures, camera);
@@ -212,7 +207,51 @@ int main() {
 
     glfwTerminate();
 
-    lua_close(L);
-
     return 0;
+}
+
+void keyboardCallback(GLFWwindow *window, Camera &camera) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, true);
+    }
+
+    float cameraSpeed = 0.1f;
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        camera.keyboardUpdate(CAMERA_MOVEMENTS::FORWARD, cameraSpeed);
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        camera.keyboardUpdate(CAMERA_MOVEMENTS::BACKWARD, cameraSpeed);
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        camera.keyboardUpdate(CAMERA_MOVEMENTS::RIGHT, cameraSpeed);
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        camera.keyboardUpdate(CAMERA_MOVEMENTS::LEFT, cameraSpeed);
+    }
+}
+
+void mouseCallback(GLFWwindow *window, Camera &camera) {
+    double x = 0.0, y = 0.0;
+
+    glfwGetCursorPos(window, &x, &y);
+
+    static bool firstMouse = true;
+    static double lastX = 0.0, lastY = 0.0;
+
+    if (firstMouse) {
+        lastX = x;
+        lastY = y;
+        firstMouse = false;
+    }
+
+    double xOffset = x - lastX, yOffset = lastY -y;
+
+    lastX = x;
+    lastY = y;
+
+    camera.mouseUpdate(xOffset, yOffset, 0.1);
 }
